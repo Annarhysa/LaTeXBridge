@@ -1,0 +1,83 @@
+body {
+  background-color: #30253E;
+  color: #C3C88C;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.container {
+  background-color: #638872;
+  padding: 2rem 3rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  width: 90%;
+  max-width: 500px;
+  text-align: center;
+}
+
+h1 {
+  color: #94C784;
+  margin-bottom: 1.5rem;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 2px solid #80B9B1;
+  border-radius: 6px;
+  background: #30253E;
+  color: #C3C88C;
+  font-size: 1rem;
+}
+
+button {
+  background-color: #94C784;
+  color: #30253E;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1rem;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: #80B9B1;
+}
+
+.result {
+  margin-top: 20px;
+  background: rgba(0,0,0,0.1);
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.result p {
+  color: #C3C88C;
+  margin: 0 0 10px 0;
+}
+
+.result a {
+  color: #80B9B1;
+  text-decoration: none;
+  font-weight: bold;
+  word-break: break-all;
+}
+
+.result a:hover {
+  color: #94C784;
+  text-decoration: underline;
+}
+
+.error {
+  color: #ff6b6b;
+  margin-top: 10px;
+}
