@@ -4,21 +4,23 @@
   <meta charset="UTF-8" />
   <title>Shortify</title>
   <link rel="stylesheet" href="/static/styles.css" />
+  <link href="https://fonts.googleapis.com/css?family=Merriweather:700,400&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 <body>
-  <div class="container">
+  <div class="main-card">
     <h1>Shortify</h1>
     <form method="POST" action="/">
       <input type="text" name="url" placeholder="Enter your long URL" required />
       <button type="submit">Shortify!</button>
     </form>
     {{ if .Error }}
-      <p class="error">{{ .Error }}</p>
+    <div class="error">{{ .Error }}</div>
     {{ else if .ShortURL }}
-      <div class="result">
-        <p>Your shortened URL:</p>
-        <a href="{{ .ShortURL }}" target="_blank">{{ .ShortURL }}</a>
-      </div>
+    <div class="result">
+      <div>Your shortened URL:</div>
+      <a href="{{ .ShortURL }}" target="_blank">{{ .ShortURL }}</a>
+    </div>
     {{ end }}
   </div>
 </body>
