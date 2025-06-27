@@ -1,73 +1,125 @@
 package main
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
-	"html/template"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
-	"sync"
-)
-
-type ShortifyData struct {
-	URL      string
-	ShortURL string
-	Error    string
-}
-
-var (
-	urlMap   = make(map[string]string)
-	mapMutex = sync.Mutex{}
+	"time"
 )
 
 func main() {
-	http.HandleFunc("/", homeHandler)
+	// Serve static files (frontend)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	http.HandleFunc("/", serveIndex)
+	http.HandleFunc("/upload", handleUpload)
 
-	fmt.Println("Starting Shortify server on http://localhost:8080")
-	if err := http.ListenAndServe("0.0.0.0:8080", nil); err != nil {
-		log.Fatal(err)
-	}
+	fmt.Println("Server started at http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	data := ShortifyData{}
+func serveIndex(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	http.ServeFile(w, r, "templates/index.html")
+}
 
-	if r.Method == http.MethodPost {
-		r.ParseForm()
-		url := r.FormValue("url")
-		if url == "" {
-			data.Error = "Please enter a URL"
-		} else {
-			if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
-				url = "https://" + url
+func handleUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.ParseMultipartForm(10 << 20) // 10 MB
+	file, handler, err := r.FormFile("pdf")
+	if err != nil {
+		http.Error(w, "Error retrieving the file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Save uploaded PDF temporarily
+	tmpPDF := filepath.Join(os.TempDir(), fmt.Sprintf("upload-%d-%s", time.Now().UnixNano(), handler.Filename))
+	out, err := os.Create(tmpPDF)
+	if err != nil {
+		http.Error(w, "Unable to save file", http.StatusInternalServerError)
+		return
+	}
+	defer out.Close()
+	io.Copy(out, file)
+
+	// Convert PDF to LaTeX (placeholder: extract text and wrap in LaTeX)
+	texContent, err := pdfToLatex(tmpPDF)
+	if err != nil {
+		http.Error(w, "Failed to convert PDF", http.StatusInternalServerError)
+		return
+	}
+
+	// Send .tex file as download
+	w.Header().Set("Content-Disposition", "attachment; filename=output.tex")
+	w.Header().Set("Content-Type", "application/x-tex")
+	w.Write([]byte(texContent))
+
+	// Clean up
+	os.Remove(tmpPDF)
+}
+
+// pdfToLatex is a placeholder: extracts text and wraps it in a LaTeX template
+func pdfToLatex(pdfPath string) (string, error) {
+	// For demo: use pdftotext if available, else just return a stub
+	text := ""
+	cmd := "pdftotext"
+	if _, err := execLookPath(cmd); err == nil {
+		txtPath := pdfPath + ".txt"
+		_ = os.Remove(txtPath)
+		if err := runCmd(cmd, pdfPath, txtPath); err == nil {
+			b, err := os.ReadFile(txtPath)
+			if err == nil {
+				text = string(b)
 			}
-
-			hash := md5.Sum([]byte(url))
-			shortKey := hex.EncodeToString(hash[:3]) // Use first 6 chars for demo
-
-			mapMutex.Lock()
-			urlMap[shortKey] = url
-			mapMutex.Unlock()
-
-			data.URL = url
-			data.ShortURL = fmt.Sprintf("http://shortify/%s", shortKey)
+			os.Remove(txtPath)
 		}
 	}
-
-	key := strings.TrimPrefix(r.URL.Path, "/")
-	if key != "" && key != "favicon.ico" {
-		mapMutex.Lock()
-		originalURL, exists := urlMap[key]
-		mapMutex.Unlock()
-		if exists {
-			http.Redirect(w, r, originalURL, http.StatusSeeOther)
-			return
-		}
+	if text == "" {
+		text = "PDF to LaTeX conversion is not implemented. Please install 'pdftotext' for basic text extraction."
 	}
+	latex := `\\documentclass{article}
+\\begin{document}
+` + latexEscape(text) + `
+\\end{document}`
+	return latex, nil
+}
 
-	tmpl := template.Must(template.ParseFiles("templates/index.html"))
-	tmpl.Execute(w, data)
+// latexEscape escapes special LaTeX characters
+func latexEscape(s string) string {
+	replacer := strings.NewReplacer(
+		"\\", "\\textbackslash{}",
+		"%", "\\%",
+		"$", "\\$",
+		"#", "\\#",
+		"_", "\\_",
+		"{", "\\{",
+		"}", "\\}",
+		"&", "\\&",
+		"~", "\\textasciitilde{}",
+		"^", "\\textasciicircum{}",
+	)
+	return replacer.Replace(s)
+}
+
+// execLookPath checks if a command exists
+func execLookPath(cmd string) (string, error) {
+	return exec.LookPath(cmd)
+}
+
+// runCmd runs a command with args
+func runCmd(name string, arg ...string) error {
+	cmd := exec.Command(name, arg...)
+	return cmd.Run()
 }
