@@ -1,27 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Shortify</title>
-  <link rel="stylesheet" href="/static/styles.css" />
-  <link href="https://fonts.googleapis.com/css?family=Merriweather:700,400&display=swap" rel="stylesheet">
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to LaTeX Converter</title>
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <div class="main-card">
-    <h1>Shortify</h1>
-    <form method="POST" action="/">
-      <input type="text" name="url" placeholder="Enter your long URL" required />
-      <button type="submit">Shortify!</button>
-    </form>
-    {{ if .Error }}
-    <div class="error">{{ .Error }}</div>
-    {{ else if .ShortURL }}
-    <div class="result">
-      <div>Your shortened URL:</div>
-      <a href="{{ .ShortURL }}" target="_blank">{{ .ShortURL }}</a>
+    <div class="container">
+        <h1 class="title">PDF to LaTeX Converter</h1>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <label for="pdf" class="file-label">Choose your PDF file:</label>
+            <input type="file" id="pdf" name="pdf" accept="application/pdf" required>
+            <button type="submit" class="upload-btn">Convert to .tex</button>
+        </form>
+        <div id="feedback" class="feedback"></div>
     </div>
-    {{ end }}
-  </div>
+    <footer class="footer">
+        <span>Made with <span style="color:#F9B97F">&#10084;</span> using the Cindy Roaming palette</span>
+    </footer>
+    <script>
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const form = e.target;
+        const fileInput = form.pdf;
+        const feedback = document.getElementById('feedback');
+        feedback.textContent = '';
+        if (!fileInput.files.length) {
+            feedback.textContent = 'Please select a PDF file.';
+            return;
+        }
+        const data = new FormData();
+        data.append('pdf', fileInput.files[0]);
+        feedback.textContent = 'Uploading and converting...';
+        try {
+            const res = await fetch('/upload', {
+                method: 'POST',
+                body: data
+            });
+            if (!res.ok) {
+                feedback.textContent = 'Conversion failed. Please try again.';
+                return;
+            }
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'output.tex';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            feedback.textContent = 'Download should start automatically!';
+        } catch (err) {
+            feedback.textContent = 'An error occurred.';
+        }
+    });
+    </script>
 </body>
-</html>
+</html> 
